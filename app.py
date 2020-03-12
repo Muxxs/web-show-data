@@ -1,4 +1,9 @@
 # coding=utf=8
+'''
+@Email: muxxs@foxmail.com
+@Auther: Muxxs
+'''
+
 
 
 from flask import Flask , render_template , request
@@ -9,10 +14,13 @@ import base64
 import numpy as np
 from sklearn import  linear_model , pipeline , preprocessing
 
-data_x = [1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10]
-data_y = [2730 , 4537 , 5997 , 7736 , 9720 , 14411 , 17238 , 20471 , 24363 , 28060]
-predict_x = [10 , 11 , 12 , 13 , 14 , 15]
-real_y = [28060 , 31211 , 34598 , 37251 , 40235 , 42708]
+
+def choose_data(data_type):
+    data_x = [1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10]
+    data_y = [2730 , 4537 , 5997 , 7736 , 9720 , 14411 , 17238 , 20471 , 24363 , 28060]
+    predict_x = [10 , 11 , 12 , 13 , 14 , 15]
+    real_y = [28060 , 31211 , 34598 , 37251 , 40235 , 42708]
+    return data_x,data_y,predict_x,real_y
 
 
 def into_2D (lists):
@@ -27,8 +35,8 @@ def into_2D (lists):
 app = Flask(__name__)
 
 
-def prediction (predict_x , model_number):
-    if model_number == '1' or model_number == None:  # 线性回归
+def prediction (data_x,data_y,predict_x , model_number):
+    if model_number == '1':  # 线性回归
         model = linear_model.LinearRegression()
     elif model_number == '2':  # 贝叶斯岭回归
         model = linear_model.BayesianRidge()
@@ -41,32 +49,31 @@ def prediction (predict_x , model_number):
         )
     model.fit(np.array(into_2D(data_x)) , np.array(into_2D(data_y)))
     predict_y = model.predict(np.array(into_2D(predict_x)))
-    print(predict_y)
     return predict_y
 
 
 @app.route('/' , methods = ['GET'])
 def Main ():
     get_type = request.args.get('type')
+    if get_type==None:
+        get_type='1'
+    get_data = request.args.get('data')
+    if get_data==None:
+        get_data='1'
+    data_x,data_y ,predict_x,real_y=choose_data(get_data)
     # matplotlib.use('Agg')  # 不出现画图的框
     # 这段正常画图
     plt.axis([1 , 15 , 0 , 50000])  # [xmin,xmax,ymin,ymax]对应轴的范围
     plt.title('Data')  # 图名
     plt.plot(data_x , data_y , 'k')
     plt.plot(predict_x , real_y , 'k')
-    plt.plot(predict_x , prediction(predict_x , get_type) , 'r')
+    plt.plot(predict_x , prediction(data_x,data_y,predict_x , get_type) , 'r')
     # -----------
     # 转成图片的步骤
     sio = BytesIO()
     plt.savefig(sio , format = 'png')
     data = base64.encodebytes(sio.getvalue()).decode()
-    html = '''
-           <html>
-               <body>
-                   <img src="data:image/png;base64,{}" />
-               </body>
-            <html>
-        '''
+    html = open("template/index.html").read().replace('option value="'+get_type+'"','option value="'+get_type+'" selected="selected"')
     plt.close()
     # 记得关闭，不然画出来的图是重复的
     return html.format(data)
